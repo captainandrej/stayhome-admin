@@ -30,13 +30,6 @@
         <!-- STATUS MSG -->
         <div id="statusMsg" class="mb-4 text-center text-xs font-medium hidden p-3 rounded-xl border"></div>
 
-        <!-- NASTAVENIE TOKENU -->
-        <div class="mb-4 bg-neutral-900 border border-neutral-800 p-3 rounded-2xl">
-            <label class="block text-[11px] font-semibold text-neutral-400 mb-1">GitHub Token (skopíruj sem ghp_...):</label>
-            <input type="password" id="ghTokenInput" placeholder="ghp_..." class="w-full bg-black border border-neutral-800 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-orange-500">
-            <button onclick="saveTokenAndReload()" class="mt-2 w-full py-2 bg-neutral-800 hover:bg-neutral-700 text-xs font-semibold rounded-xl transition">Overit a načítať videá</button>
-        </div>
-
         <!-- 1. VÝBER KATEGÓRIE -->
         <div class="mb-4">
             <label class="block text-xs font-semibold text-neutral-300 mb-2">1. Vyber kategóriu videa:</label>
@@ -77,9 +70,14 @@
             </div>
             
             <div id="videoListContainer" class="space-y-2.5 max-h-96 overflow-y-auto pr-1">
-                <p class="text-xs text-neutral-500 text-center py-4">Najskôr zadaj GitHub token vyššie...</p>
+                <p class="text-xs text-neutral-500 text-center py-4">Načítavam zoznam videí...</p>
             </div>
         </div>
+
+        <!-- SKRYTÉ NASTAVENIA S PREDVYPLNENÝM TOKENOM -->
+        <input type="hidden" id="ghUser" value="captainandrej">
+        <input type="hidden" id="ghRepo" value="stayhome">
+        <input type="hidden" id="ghToken" value="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">
     </div>
 
     <script>
@@ -88,24 +86,11 @@
         let globalFileContent = '';
         const user = "captainandrej";
         const repo = "stayhome";
+        const token = "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";
 
         window.onload = function() {
-            const savedToken = localStorage.getItem('gh_token');
-            if (savedToken) {
-                document.getElementById('ghTokenInput').value = savedToken;
-                loadRepoData();
-            }
-        };
-
-        function saveTokenAndReload() {
-            const token = document.getElementById('ghTokenInput').value.trim();
-            localStorage.setItem('gh_token', token);
             loadRepoData();
-        }
-
-        function getToken() {
-            return document.getElementById('ghTokenInput').value.trim() || localStorage.getItem('gh_token');
-        }
+        };
 
         function selectCategory(cat) {
             selectedCategory = cat;
@@ -120,14 +105,7 @@
         }
 
         async function loadRepoData() {
-            const token = getToken();
             const listContainer = document.getElementById('videoListContainer');
-            
-            if (!token) {
-                listContainer.innerHTML = '<p class="text-xs text-rose-400 text-center py-4">⚠️ Musíš zadať GitHub token vyššie!</p>';
-                return;
-            }
-
             listContainer.innerHTML = '<p class="text-xs text-neutral-500 text-center py-4">Načítavam zoznam videí...</p>';
 
             try {
@@ -203,16 +181,11 @@
         }
 
         async function sendVideo() {
-            const token = getToken();
             const statusBox = document.getElementById('statusMsg');
             const link = document.getElementById('videoLink').value.trim();
 
             statusBox.classList.remove('hidden', 'text-emerald-400', 'bg-emerald-500/10', 'border-emerald-500/20', 'text-rose-400', 'bg-rose-500/10', 'border-rose-500/20');
 
-            if (!token) {
-                alert("Zadaj GitHub token!");
-                return;
-            }
             if (!selectedCategory) {
                 statusBox.className = "mb-4 text-center text-xs font-medium text-rose-400 bg-rose-500/10 border border-rose-500/20 p-3 rounded-xl";
                 statusBox.innerText = "⚠️ Vyber kategóriu!";
@@ -248,7 +221,7 @@
                     updatedContent = updatedContent.replace('const socialMediaPosts = [', 'const socialMediaPosts = [\n' + newEntry);
                 }
 
-                await saveToGitHub(updatedContent, token, "Pridané video cez admin");
+                await saveToGitHub(updatedContent, "Pridané video cez admin");
                 statusBox.className = "mb-4 text-center text-xs font-medium text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 p-3 rounded-xl";
                 statusBox.innerText = "✅ Úspešne pridané!";
                 document.getElementById('videoLink').value = '';
@@ -261,8 +234,6 @@
 
         async function deleteVideo(category, id) {
             if (!confirm("Vymazať toto video?")) return;
-            const token = getToken();
-            const statusBox = document.getElementById('statusMsg');
             
             try {
                 let phubStart = globalFileContent.indexOf('const phubVideos = [');
@@ -287,14 +258,14 @@
                     updatedContent = updatedContent.replace(socString, 'const socialMediaPosts = ' + JSON.stringify(socialMediaPosts, null, 4) + ';');
                 }
 
-                await saveToGitHub(updatedContent, token, "Vymazané video");
+                await saveToGitHub(updatedContent, "Vymazané video");
                 loadRepoData();
             } catch (err) {
                 alert("Chyba pri mazaní: " + err.message);
             }
         }
 
-        async function saveToGitHub(newContent, token, message) {
+        async function saveToGitHub(newContent, message) {
             const apiUrl = `https://api.github.com/repos/${user}/${repo}/contents/index.html`;
             const encodedContent = btoa(unescape(encodeURIComponent(newContent)));
             
@@ -311,7 +282,7 @@
                 })
             });
 
-            if (!putRes.ok) throw new Error("Chyba zápisu na GitHub (skontroluj či má token repo práva).");
+            if (!putRes.ok) throw new Error("Chyba zápisu na GitHub.");
         }
     </script>
 </body>
