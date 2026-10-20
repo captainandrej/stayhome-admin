@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stay home - Admin Panel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-black text-white min-h-screen flex items-center justify-center p-4">
+    <div class="bg-neutral-900 border border-neutral-800 w-full max-w-md rounded-2xl p-6 shadow-2xl">
+        <h2 class="text-xl font-bold mb-1 text-center text-phub-orange" style="color: #ff9900;">Stay home - Admin</h2>
+        <p class="text-xs text-neutral-400 text-center mb-6">Pridanie nového videa na GitHub Pages</p>
+
+        <!-- Nastavenia GitHubu (predvyplnené) -->
+        <div class="space-y-4 mb-6 bg-black/40 p-4 rounded-xl border border-neutral-800">
+            <h3 class="text-xs font-bold uppercase text-neutral-400">GitHub Nastavenia</h3>
+            <div>
+                <label class="block text-[11px] text-neutral-400 mb-1">GitHub Username</label>
+                <input type="text" id="ghUser" value="captainandrej" class="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white">
+            </div>
+            <div>
+                <label class="block text-[11px] text-neutral-400 mb-1">Repository Name</label>
+                <input type="text" id="ghRepo" value="stayhome" class="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white">
+            </div>
+            <div>
+                <label class="block text-[11px] text-neutral-400 mb-1">GitHub Personal Access Token (PAT)</label>
+                <input type="password" id="ghToken" value="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" class="w-full bg-neutral-950 border border-neutral-800 rounded-lg px-3 py-2 text-xs text-white">
+            </div>
+        </div>
+
+        <!-- Výber kategórie -->
+        <div class="mb-4">
+            <label class="block text-xs font-semibold text-neutral-300 mb-2">1. Vyber kategóriu:</label>
+            <div class="grid grid-cols-2 gap-3">
+                <button type="button" onclick="selectCategory('social')" id="catSocial" class="py-3 rounded-xl border border-neutral-800 bg-neutral-950 text-xs font-bold transition text-neutral-400 hover:border-neutral-600">
+                    <i class="fa-solid fa-share-nodes mr-1"></i> SocMedia
+                </button>
+                <button type="button" onclick="selectCategory('phub')" id="catPhub" class="py-3 rounded-xl border border-neutral-800 bg-neutral-950 text-xs font-bold transition text-neutral-400 hover:border-neutral-600">
+                    <i class="fa-solid fa-fire text-orange-500 mr-1"></i> Phub+
+                </button>
+            </div>
+        </div>
+
+        <!-- Vloženie linku -->
+        <div class="mb-6">
+            <label class="block text-xs font-semibold text-neutral-300 mb-2">2. Vlož odkaz na video:</label>
+            <input type="text" id="videoLink" placeholder="https://cz.pornhub.com/view_video.php?viewkey=..." class="w-full bg-black border border-neutral-800 rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none focus:border-orange-500">
+        </div>
+
+        <!-- Tlačidlo SEND -->
+        <button onclick="sendVideo()" class="w-full py-3 bg-orange-500 text-black font-bold rounded-xl text-sm hover:opacity-95 transition shadow-lg shadow-orange-500/20" style="background-color: #ff9900;">
+            SEND & Update Website
+        </button>
+
+        <div id="statusMsg" class="mt-4 text-center text-xs font-medium hidden"></div>
+    </div>
+
+    <script>
+        let selectedCategory = '';
+
+        function selectCategory(cat) {
+            selectedCategory = cat;
+            document.getElementById('catSocial').className = "py-3 rounded-xl border border-neutral-800 bg-neutral-950 text-xs font-bold transition text-neutral-400";
+            document.getElementById('catPhub').className = "py-3 rounded-xl border border-neutral-800 bg-neutral-950 text-xs font-bold transition text-neutral-400";
+
+            if (cat === 'social') {
+                document.getElementById('catSocial').className = "py-3 rounded-xl border border-orange-500 bg-orange-500/10 text-xs font-bold transition text-orange-400 shadow-md";
+            } else {
+                document.getElementById('catPhub').className = "py-3 rounded-xl border border-orange-500 bg-orange-500/10 text-xs font-bold transition text-orange-400 shadow-md";
+            }
+        }
+
+        async function sendVideo() {
+            const statusBox = document.getElementById('statusMsg');
+            const link = document.getElementById('videoLink').value.trim();
+            const token = document.getElementById('ghToken').value.trim();
+            const user = document.getElementById('ghUser').value.trim();
+            const repo = document.getElementById('ghRepo').value.trim();
+
+            statusBox.classList.remove('hidden', 'text-emerald-400', 'text-rose-400');
+
+            if (!selectedCategory) {
+                statusBox.className = "mt-4 text-center text-xs font-medium text-rose-400";
+                statusBox.innerText = "⚠️ Prosím vyber kategóriu (SocMedia alebo Phub+)!";
+                return;
+            }
+            if (!link) {
+                statusBox.className = "mt-4 text-center text-xs font-medium text-rose-400";
+                statusBox.innerText = "⚠️ Prosím vlož odkaz na video!";
+                return;
+            }
+            if (!token) {
+                statusBox.className = "mt-4 text-center text-xs font-medium text-rose-400";
+                statusBox.innerText = "⚠️ Zadaj svoj GitHub Personal Access Token!";
+                return;
+            }
+
+            statusBox.className = "mt-4 text-center text-xs font-medium text-orange-400";
+            statusBox.innerText = "⏳ Spracovávam a aktualizujem GitHub repozitár...";
+
+            try {
+                const apiUrl = `https://api.github.com/repos/${user}/${repo}/contents/index.html`;
+                const getRes = await fetch(apiUrl, {
+                    headers: { 'Authorization': `token ${token}` }
+                });
+
+                if (!getRes.ok) throw new Error("Chyba pripojenia ku GitHub API (skontroluj token a meno repozitára).");
+
+                const fileData = await getRes.json();
+                let content = decodeURIComponent(escape(atob(fileData.content)));
+
+                let viewkey = "";
+                if (link.includes("viewkey=")) {
+                    const urlParams = new URLSearchParams(link.split('?')[1]);
+                    viewkey = urlParams.get('viewkey');
+                } else if (link.includes("reel/")) {
+                    const parts = link.split('/');
+                    viewkey = parts[parts.indexOf('reel') + 1];
+                }
+
+                if (!viewkey) {
+                    viewkey = "custom_" + Date.now();
+                }
+
+                if (selectedCategory === 'phub') {
+                    const newEntry = `            {\n                id: 'ph_${Date.now()}',\n                title: 'New Added Video',\n                channel: 'Pornhub Video',\n                duration: '15:00',\n                views: '100K views • New',\n                viewkey: '${viewkey}',\n                embedUrl: 'https://cz.pornhub.com/embed/${viewkey}'\n            },\n`;
+                    content = content.replace('const phubVideos = [', 'const phubVideos = [\n' + newEntry);
+                } else {
+                    const newEntry = `            {\n                id: 'sm_${Date.now()}',\n                title: 'New Social Reel',\n                channel: '@stayhome_official',\n                embedUrl: '${link}',\n                aspect: '9/16'\n            },\n`;
+                    content = content.replace('const socialMediaPosts = [', 'const socialMediaPosts = [\n' + newEntry);
+                }
+
+                const encodedContent = btoa(unescape(encodeURIComponent(content)));
+                const putRes = await fetch(apiUrl, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `token ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        message: `Pridané nové video (${selectedCategory}) cez admin panel`,
+                        content: encodedContent,
+                        sha: fileData.sha
+                    })
+                });
+
+                if (!putRes.ok) throw new Error("Nepodarilo sa uložiť zmeny na GitHub.");
+
+                statusBox.className = "mt-4 text-center text-xs font-medium text-emerald-400";
+                statusBox.innerText = "✅ Úspešne pridané! Web sa aktualizuje na https://captainandrej.github.io/stayhome/ do 30 sekúnd.";
+                document.getElementById('videoLink').value = '';
+
+            } catch (err) {
+                statusBox.className = "mt-4 text-center text-xs font-medium text-rose-400";
+                statusBox.innerText = "❌ Chyba: " + err.message;
+            }
+        }
+    </script>
+</body>
+</html>
